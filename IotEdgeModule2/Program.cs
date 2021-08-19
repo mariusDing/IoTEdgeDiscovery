@@ -76,11 +76,11 @@ namespace IotEdgeModule2
 
             if (!string.IsNullOrEmpty(messageString))
             {
-                    messageString = SlackMessageConverter(messageString);
+                    //messageString = SlackMessageConverter(messageString);
 
-                    var alertMsg = $"Identify {messageString}";
+                    //var alertMsg = $"Identify {messageString}";
 
-                    var msgBytes = Encoding.ASCII.GetBytes(alertMsg);
+                    var msgBytes = Encoding.ASCII.GetBytes(messageString);
 
                     using (var pipeMessage = new Message(msgBytes))
                     {
