@@ -9,7 +9,13 @@
           "settings": {
             "minDockerVersion": "v1.25",
             "loggingOptions": "",
-            "registryCredentials": {}
+            "registryCredentials": {
+              "sagacontainer": {
+                "username": "$CONTAINER_REGISTRY_USERNAME_sagacontainer",
+                "password": "$CONTAINER_REGISTRY_PASSWORD_sagacontainer",
+                "address": "sagacontainer.azurecr.io"
+              }
+            }
           }
         },
         "systemModules": {
@@ -69,6 +75,27 @@
             "settings": {
               "image": "${MODULEDIR<../IotEdgeModule2>}",
               "createOptions": {}
+            }
+          },
+          "VisionModule": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "sagacontainer.azurecr.io/visionmodule:0.0.1",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "80/tcp": [
+                      {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "80"
+                      }
+                    ]
+                  }
+                }
+              }
             }
           }
         }

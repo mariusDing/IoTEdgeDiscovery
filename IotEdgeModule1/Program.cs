@@ -233,7 +233,7 @@ namespace IotEdgeModule1
         {
             var visionClient = new HttpClient
             {
-                BaseAddress = new Uri("http://127.0.0.1/")
+                BaseAddress = new Uri($"http://127.0.0.1:80/")
             };
 
             return visionClient;

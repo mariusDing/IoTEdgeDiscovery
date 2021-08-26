@@ -84,7 +84,18 @@
             "restartPolicy": "always",
             "settings": {
               "image": "sagacontainer.azurecr.io/visionmodule:0.0.1",
-              "createOptions": {}
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "80/tcp": [
+                      {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "80"
+                      }
+                    ]
+                  }
+                }
+              }
             }
           }
         }
