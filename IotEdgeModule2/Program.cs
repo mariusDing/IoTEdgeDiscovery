@@ -1,12 +1,7 @@
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Client.Transport.Mqtt;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
-using System.IO;
-using System.Runtime.InteropServices;
 using System.Runtime.Loader;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -82,29 +77,19 @@ namespace IotEdgeModule2
 
                     var msgBytes = Encoding.ASCII.GetBytes(messageString);
 
-                    using (var pipeMessage = new Message(msgBytes))
-                    {
-                        foreach (var prop in message.Properties)
-                        {
-                            pipeMessage.Properties.Add(prop.Key, prop.Value);
-                        }
-                        await moduleClient.SendEventAsync("output2", pipeMessage);
+                    using var pipeMessage = new Message(msgBytes);
 
-                        Console.WriteLine("Alert message sent");
+                    foreach (var prop in message.Properties)
+                    {
+                        pipeMessage.Properties.Add(prop.Key, prop.Value);
                     }
+
+                    await moduleClient.SendEventAsync("output2", pipeMessage);
+
+                    Console.WriteLine("Message sent");
             }
 
             return MessageResponse.Completed;
-        }
-
-        private static string SlackMessageConverter(string content)
-        {
-            return content switch
-            {
-                "apple" => ":apple:",
-                "Banana" => ":bananadance:",
-                _ => content
-            };
         }
     }
 }

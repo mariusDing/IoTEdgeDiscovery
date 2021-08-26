@@ -61,16 +61,6 @@
               "createOptions": {}
             }
           },
-          "SimulatedTemperatureSensor": {
-            "version": "1.0",
-            "type": "docker",
-            "status": "running",
-            "restartPolicy": "always",
-            "settings": {
-              "image": "mcr.microsoft.com/azureiotedge-simulated-temperature-sensor:1.0",
-              "createOptions": {}
-            }
-          },
           "IotEdgeModule2": {
             "version": "1.0.0",
             "type": "docker",
@@ -89,7 +79,6 @@
         "schemaVersion": "1.0",
         "routes": {
           "IotEdgeModule1ToIoTHub": "FROM /messages/modules/IotEdgeModule1/outputs/output1 INTO BrokeredEndpoint(\"/modules/IotEdgeModule2/inputs/input2\")",
-          "sensorToIotEdgeModule1": "FROM /messages/modules/SimulatedTemperatureSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/IotEdgeModule1/inputs/input1\")",
           "IotEdgeModule2ToIoTHub": "FROM /messages/modules/IotEdgeModule2/outputs/output2 INTO $upstream"
         },
         "storeAndForwardConfiguration": {
