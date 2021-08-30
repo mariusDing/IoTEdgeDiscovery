@@ -79,12 +79,6 @@ namespace IotEdgeModule1
 
         private static async Task StartCameraStream(object userContext, bool shoppingSessionStart, bool enableCameraStream)
         {
-            Console.WriteLine("Open a video capture");
-            var capture = new VideoCapture(1);
-
-            Console.WriteLine("Start a frame");
-            using var frame = new Mat();
-
             if (!(userContext is ModuleClient moduleClient))
             {
                 throw new InvalidOperationException("UserContext doesn't contain " + "expected values");
@@ -94,6 +88,12 @@ namespace IotEdgeModule1
             {
                 if (enableCameraStream)
                 {
+                    Console.WriteLine("Open a video capture");
+                    var capture = new VideoCapture(1);
+
+                    Console.WriteLine("Start a frame");
+                    using var frame = new Mat();
+
                     // Detect barcode to start shopping session
                     while (!shoppingSessionStart)
                     {
