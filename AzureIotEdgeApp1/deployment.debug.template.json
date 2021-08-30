@@ -58,11 +58,6 @@
         },
         "modules": {
           "IotEdgeModule1": {
-            "properties": {
-              "desired": {
-                "EnableCameraStream": true
-              }
-            },
             "version": "1.0.0",
             "type": "docker",
             "status": "running",
@@ -116,6 +111,11 @@
         "storeAndForwardConfiguration": {
           "timeToLiveSecs": 7200
         }
+      }
+    },
+    "IotEdgeModule1": {
+      "properties.desired": {
+        "EnableCameraStream": true
       }
     }
   }
