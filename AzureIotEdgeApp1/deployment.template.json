@@ -58,6 +58,11 @@
         },
         "modules": {
           "IotEdgeModule1": {
+            "properties": {
+              "desired": {
+                "EnableCameraStream": true
+              }
+            },
             "version": "1.0.0",
             "type": "docker",
             "status": "running",

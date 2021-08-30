@@ -1,6 +1,7 @@
 using IotEdgeModule1.Model;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Client.Transport.Mqtt;
+using Microsoft.Azure.Devices.Shared;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System;
@@ -23,6 +24,7 @@ namespace IotEdgeModule1
         static readonly bool shoppingSessionStart = false;
         static readonly string basketDeviceNumber = "001";
         readonly static VirtualBasket virtualBasket = new VirtualBasket();
+        static bool enableCameraStream = false;
 
         private static readonly HttpClient _visionClient = GetVisionClient();
 
@@ -61,10 +63,21 @@ namespace IotEdgeModule1
             await ioTHubModuleClient.OpenAsync();
             Console.WriteLine("Test module 1 is initialized.");
 
-            await StartCameraStream(ioTHubModuleClient, shoppingSessionStart);
+            var moduleTwin = await ioTHubModuleClient.GetTwinAsync();
+
+            var desiredProps = moduleTwin.Properties.Desired;
+
+            if (desiredProps.Contains("EnableCameraStream"))
+                enableCameraStream = desiredProps["EnableCameraStream"];
+
+            // Listen desired props change
+            await ioTHubModuleClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChanged, ioTHubModuleClient);
+
+            // Start Camera stream
+            await StartCameraStream(ioTHubModuleClient, shoppingSessionStart, enableCameraStream);
         }
 
-        private static async Task StartCameraStream(object userContext, bool shoppingSessionStart)
+        private static async Task StartCameraStream(object userContext, bool shoppingSessionStart, bool enableCameraStream)
         {
             Console.WriteLine("Open a video capture");
             var capture = new VideoCapture(1);
@@ -79,156 +92,182 @@ namespace IotEdgeModule1
 
             while (true)
             {
-                // Detect barcode to start shopping session
-                while (!shoppingSessionStart)
+                if (enableCameraStream)
                 {
-                    capture.Read(frame);
-                    Console.WriteLine("Start read frame");
-
-                    if (frame.Empty())
+                    // Detect barcode to start shopping session
+                    while (!shoppingSessionStart)
                     {
-                        Console.WriteLine("empty frame");
-                        break;
-                    }
+                        capture.Read(frame);
+                        Console.WriteLine("Start read frame");
 
-                    // Read barcode to start a shopping session
-                    var reader = new BarcodeReader();
-
-                    var readerResult = reader.Decode(frame.ToBitmap());
-
-                    if (readerResult != null && readerResult.BarcodeFormat != BarcodeFormat.QR_CODE)
-                    {
-                        var rewardsCardNumber = readerResult.Text;
-
-                        //var sessionStartMsg = $":rewardsleaf:*{rewardsCardNumber}* start shopping on virtual basket - {virtualBasketNumber}";
-
-                        var payload = new { rewardsCardNumber };
-                        
-                        var msgBytes = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(payload));
-
-                        using var pipeMessage = new Message(msgBytes);
-
-                        pipeMessage.Properties.Add("ShopperEvent", "CardScanned");
-                        pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
-
-                        await moduleClient.SendEventAsync("output1", pipeMessage);
-
-                        shoppingSessionStart = true;
-                    }
-                }
-
-                // Detect product
-                while (shoppingSessionStart)
-                {
-                    capture.Read(frame);
-                    Console.WriteLine("Start read frame");
-
-                    if (frame.Empty())
-                    {
-                        Console.WriteLine("empty frame");
-                        break;
-                    }
-
-                    // Read QR code to start a checkout session
-                    var qrReader = new BarcodeReader();
-
-                    var qrReaderResult = qrReader.Decode(frame.ToBitmap());
-
-                    if (qrReaderResult != null && qrReaderResult.BarcodeFormat == BarcodeFormat.QR_CODE)
-                    {
-                        //var total = virtualBasket.Count * 10;
-
-                        //var sessionStartMsg = $"Checkout completed. Total paid: *${total:N}* Thank you for shopping in Woolies~ See ya next time~ :smile_cat:";
-                        var payload = JsonSerializer.Serialize(virtualBasket);
-
-                        var msgBytes = Encoding.ASCII.GetBytes(payload);
-
-                        using var pipeMessage = new Message(msgBytes);
-
-                        pipeMessage.Properties.Add("ShopperEvent", "CheckoutScanned");
-                        pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
-
-                        await moduleClient.SendEventAsync("output1", pipeMessage);
-
-                        // Reset session
-                        shoppingSessionStart = false;
-                        visionItemName = string.Empty;
-                        virtualBasket.BasketProducts.Clear();
-                        break;
-                    }
-
-                    var frameBytes = frame.ToBytes(".png");
-
-                    var httpContent = new ByteArrayContent(frameBytes);
-
-                    Console.WriteLine("start send to vision api");
-                    var response = await _visionClient.PostAsync("image", httpContent);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var content = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine("start deserialize");
-                        var result = JsonSerializer.Deserialize<VisionResponse>(content, new JsonSerializerOptions()
+                        if (frame.Empty())
                         {
-                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                        }); ;
+                            Console.WriteLine("empty frame");
+                            break;
+                        }
 
-                        if (result.Predictions.Any())
+                        // Read barcode to start a shopping session
+                        var reader = new BarcodeReader();
+
+                        var readerResult = reader.Decode(frame.ToBitmap());
+
+                        if (readerResult != null && readerResult.BarcodeFormat != BarcodeFormat.QR_CODE)
                         {
-                            var highestRate = 0;
+                            var rewardsCardNumber = readerResult.Text;
 
-                            VisionPrediction highestProableItem = null;
+                            //var sessionStartMsg = $":rewardsleaf:*{rewardsCardNumber}* start shopping on virtual basket - {virtualBasketNumber}";
 
-                            result.Predictions.ForEach(p => {
-                                if (p.Probability >= 1.0 && p.Probability > highestRate)
-                                {
-                                    highestProableItem = p;
-                                }
-                            });
+                            var payload = new { rewardsCardNumber };
 
-                            if (highestProableItem != null && visionItemName != highestProableItem.TagName)
-                            {
+                            var msgBytes = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(payload));
 
-                                //var productInBasketMsg = $"Customer put a {SlackMessageConverter(highestProableItem.TagName)} in virtual basket ({virtualBasketNumber})";
+                            using var pipeMessage = new Message(msgBytes);
 
-                                var basketProduct = ProductCodeConverter(highestProableItem.TagName);
+                            pipeMessage.Properties.Add("ShopperEvent", "CardScanned");
+                            pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
 
-                                var payload = JsonSerializer.Serialize(basketProduct);
+                            await moduleClient.SendEventAsync("output1", pipeMessage);
 
-                                var msgBytes = Encoding.ASCII.GetBytes(payload);
+                            shoppingSessionStart = true;
 
-                                using var pipeMessage = new Message(msgBytes);
-
-                                pipeMessage.Properties.Add("ShopperEvent", "ProductScanned");
-                                pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
-
-                                await moduleClient.SendEventAsync("output1", pipeMessage);
-
-                                // Throttle 
-                                visionItemName = highestProableItem.TagName;
-
-                                var existingProduct = virtualBasket.BasketProducts.Where(p => p.Stockcode == basketProduct.Stockcode).FirstOrDefault();
-
-                                if (existingProduct != null)
-                                {
-                                    existingProduct.Quantity += basketProduct.Quantity;
-                                } else
-                                {
-                                    virtualBasket.BasketProducts.Add(basketProduct);
-                                }
-
-                                Console.WriteLine("Message sent");
-                            }
+                            Console.Beep();
                         }
                     }
-                    else
+
+                    // Detect product
+                    while (shoppingSessionStart)
                     {
-                        Console.WriteLine("vision api fails");
-                    }
+                        capture.Read(frame);
+                        Console.WriteLine("Start read frame");
+
+                        if (frame.Empty())
+                        {
+                            Console.WriteLine("empty frame");
+                            break;
+                        }
+
+                        // Read QR code to start a checkout session
+                        var qrReader = new BarcodeReader();
+
+                        var qrReaderResult = qrReader.Decode(frame.ToBitmap());
+
+                        if (qrReaderResult != null && qrReaderResult.BarcodeFormat == BarcodeFormat.QR_CODE)
+                        {
+                            //var total = virtualBasket.Count * 10;
+
+                            //var sessionStartMsg = $"Checkout completed. Total paid: *${total:N}* Thank you for shopping in Woolies~ See ya next time~ :smile_cat:";
+                            var payload = JsonSerializer.Serialize(virtualBasket);
+
+                            var msgBytes = Encoding.ASCII.GetBytes(payload);
+
+                            using var pipeMessage = new Message(msgBytes);
+
+                            pipeMessage.Properties.Add("ShopperEvent", "CheckoutScanned");
+                            pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
+
+                            await moduleClient.SendEventAsync("output1", pipeMessage);
+
+                            // Reset session
+                            shoppingSessionStart = false;
+                            visionItemName = string.Empty;
+                            virtualBasket.BasketProducts.Clear();
+                            Console.Beep();
+                            break;
+                        }
+
+                        var frameBytes = frame.ToBytes(".png");
+
+                        var httpContent = new ByteArrayContent(frameBytes);
+
+                        Console.WriteLine("start send to vision api");
+                        var response = await _visionClient.PostAsync("image", httpContent);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var content = await response.Content.ReadAsStringAsync();
+                            Console.WriteLine("start deserialize");
+                            var result = JsonSerializer.Deserialize<VisionResponse>(content, new JsonSerializerOptions()
+                            {
+                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                            }); ;
+
+                            if (result.Predictions.Any())
+                            {
+                                var highestRate = 0;
+
+                                VisionPrediction highestProableItem = null;
+
+                                result.Predictions.ForEach(p => {
+                                    if (p.Probability >= 1.0 && p.Probability > highestRate)
+                                    {
+                                        highestProableItem = p;
+                                    }
+                                });
+
+                                if (highestProableItem != null && visionItemName != highestProableItem.TagName)
+                                {
+
+                                    //var productInBasketMsg = $"Customer put a {SlackMessageConverter(highestProableItem.TagName)} in virtual basket ({virtualBasketNumber})";
+
+                                    var basketProduct = ProductCodeConverter(highestProableItem.TagName);
+
+                                    var payload = JsonSerializer.Serialize(basketProduct);
+
+                                    var msgBytes = Encoding.ASCII.GetBytes(payload);
+
+                                    using var pipeMessage = new Message(msgBytes);
+
+                                    pipeMessage.Properties.Add("ShopperEvent", "ProductScanned");
+                                    pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
+
+                                    await moduleClient.SendEventAsync("output1", pipeMessage);
+
+                                    // Throttle 
+                                    visionItemName = highestProableItem.TagName;
+
+                                    var existingProduct = virtualBasket.BasketProducts.Where(p => p.Stockcode == basketProduct.Stockcode).FirstOrDefault();
+
+                                    if (existingProduct != null)
+                                    {
+                                        existingProduct.Quantity += basketProduct.Quantity;
+                                    }
+                                    else
+                                    {
+                                        virtualBasket.BasketProducts.Add(basketProduct);
+                                    }
+
+                                    Console.WriteLine("Message sent");
+                                    Console.Beep();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("vision api fails");
+                        }
+                    } 
                 }
-            }
+                else
+                {
+                    // Do nothing to prevent app restart over and over again
+                }
+            }      
         }
 
+        private static async Task OnDesiredPropertyChanged(TwinCollection desiredProperties, object userContext)
+        {
+            if (!(userContext is ModuleClient moduleClient))
+            {
+                throw new InvalidOperationException("UserContext doesn't contain " + "expected values");
+            }
+
+            if (desiredProperties.Contains("EnableCameraStream"))
+            {
+                enableCameraStream = desiredProperties["EnableCameraStream"];
+            }
+
+            await Task.CompletedTask;
+        }
         private static HttpClient GetVisionClient()
         {
             var visionClient = new HttpClient
