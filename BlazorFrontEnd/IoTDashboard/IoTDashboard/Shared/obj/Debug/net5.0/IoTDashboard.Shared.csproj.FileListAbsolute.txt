@@ -1,0 +1,12 @@
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\bin\Debug\net5.0\IoTDashboard.Shared.deps.json
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\bin\Debug\net5.0\IoTDashboard.Shared.dll
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\bin\Debug\net5.0\ref\IoTDashboard.Shared.dll
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\bin\Debug\net5.0\IoTDashboard.Shared.pdb
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\obj\Debug\net5.0\IoTDashboard.Shared.csproj.AssemblyReference.cache
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\obj\Debug\net5.0\IoTDashboard.Shared.GeneratedMSBuildEditorConfig.editorconfig
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\obj\Debug\net5.0\IoTDashboard.Shared.AssemblyInfoInputs.cache
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\obj\Debug\net5.0\IoTDashboard.Shared.AssemblyInfo.cs
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\obj\Debug\net5.0\IoTDashboard.Shared.csproj.CoreCompileInputs.cache
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\obj\Debug\net5.0\IoTDashboard.Shared.dll
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\obj\Debug\net5.0\ref\IoTDashboard.Shared.dll
+D:\Work\wollies\ChapterIoTEdge\MariusVSModule\test\BlazorFrontEnd\IoTDashboard\IoTDashboard\Shared\obj\Debug\net5.0\IoTDashboard.Shared.pdb
