@@ -89,7 +89,7 @@ namespace IotEdgeModule1
                 if (enableCameraStream)
                 {
                     Console.WriteLine("Open a video capture");
-                    var capture = new VideoCapture(1);
+                    var capture = new VideoCapture(0);
 
                     Console.WriteLine("Start a frame");
                     using var frame = new Mat();
