@@ -249,6 +249,7 @@ namespace IotEdgeModule1
                 }
                 else
                 {
+                    Console.WriteLine("DisableCameraStream");
                     // Do nothing to prevent app restart over and over again
                 }
             }      

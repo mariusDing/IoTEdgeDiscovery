@@ -64,7 +64,18 @@
             "restartPolicy": "always",
             "settings": {
               "image": "${MODULEDIR<../IotEdgeModule1>}",
-              "createOptions": {}
+              "createOptions": {
+                "HostConfig": {
+                  "Binds": [ "/dev/video0:/dev/video0" ],
+                  "Devices": [
+                    {
+                      "PathOnHost": "/dev/video0",
+                      "PathInContainer": "/dev/video0",
+                      "CgroupPermissions": "mrw"
+                    }
+                  ]
+                }
+              }
             }
           },
           "IotEdgeModule2": {
