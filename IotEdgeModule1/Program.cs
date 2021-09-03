@@ -105,10 +105,10 @@ namespace IotEdgeModule1
                             Console.WriteLine("empty frame");
                             break;
                         }
-
+                        Console.WriteLine("frame read");
                         // Read barcode to start a shopping session
                         var reader = new BarcodeReader();
-
+                        Console.WriteLine("start barcode reader");
                         var readerResult = reader.Decode(frame.ToBitmap());
 
                         if (readerResult != null && readerResult.BarcodeFormat != BarcodeFormat.QR_CODE)
