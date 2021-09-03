@@ -2,9 +2,9 @@
     "$schema-version": "0.0.1",
     "description": "",
   "image": {
-    "repository": "sagacontainer.azurecr.io/iotedgemodule1:0.0.1-amd64",
+    "repository": "sagacontainer.azurecr.io/iotedgemodule1",
     "tag": {
-      "version": "0.0.1",
+      "version": "0.0.9",
       "platforms": {
         "amd64": "./Dockerfile.amd64",
         "amd64.debug": "./Dockerfile.amd64.debug",
