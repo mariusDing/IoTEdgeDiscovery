@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using ZXing;
 using static IotEdgeModule1.Model.VirtualBasket;
 using static IotEdgeModule1.Model.VisionResponse;
+using System.Device.Gpio;
+using System.Collections.Generic;
 
 namespace IotEdgeModule1
 {
@@ -25,6 +27,10 @@ namespace IotEdgeModule1
         static readonly string basketDeviceNumber = "001";
         readonly static VirtualBasket virtualBasket = new VirtualBasket();
         static bool enableCameraStream = false;
+        static int red = 3;
+        static int yellow = 5;
+        static int green = 7;
+        static List<int> ledPins;
 
         private static readonly HttpClient _visionClient = GetVisionClient();
 
@@ -79,6 +85,10 @@ namespace IotEdgeModule1
 
         private static async Task StartCameraStream(object userContext, bool shoppingSessionStart, bool enableCameraStream)
         {
+            // Init GPIO
+            Console.WriteLine("init GpIO");
+            var controller = InitGpIO();
+
             if (!(userContext is ModuleClient moduleClient))
             {
                 throw new InvalidOperationException("UserContext doesn't contain " + "expected values");
@@ -99,6 +109,9 @@ namespace IotEdgeModule1
                     {
                         capture.Read(frame);
                         Console.WriteLine("Start read frame");
+
+                        // Indicate light to yellow as ready
+                        TurnOnLight(controller, yellow);
 
                         if (frame.Empty())
                         {
@@ -131,6 +144,9 @@ namespace IotEdgeModule1
                             shoppingSessionStart = true;
 
                             Console.Beep();
+
+                            // Indicate light to green as session start
+                            TurnOnLight(controller, green);
                         }
                     }
 
@@ -172,6 +188,10 @@ namespace IotEdgeModule1
                             visionItemName = string.Empty;
                             virtualBasket.BasketProducts.Clear();
                             Console.Beep();
+
+                            // Indicate light to yellow as session end
+                            TurnOnLight(controller, yellow);
+
                             break;
                         }
 
@@ -238,6 +258,9 @@ namespace IotEdgeModule1
 
                                     Console.WriteLine("Message sent");
                                     Console.Beep();
+
+                                    // Green light flash
+                                    LightFlash(controller, green);
                                 }
                             }
                         }
@@ -245,12 +268,15 @@ namespace IotEdgeModule1
                         {
                             Console.WriteLine("vision api fails");
                         }
-                    } 
+                    }
+
+                    capture.Dispose();
                 }
                 else
                 {
-                    Console.WriteLine("DisableCameraStream");
-                    // Do nothing to prevent app restart over and over again
+                    Console.WriteLine("CameraStream Disabled");
+                    TurnOnLight(controller, red);
+                    Console.WriteLine("Turn on RED in CameraStream Disabled");
                 }
             }      
         }
@@ -296,6 +322,50 @@ namespace IotEdgeModule1
                 },
                 _ => null
             };
+        }
+
+        private static GpioController InitGpIO()
+        {
+            GpioController controller = new GpioController(PinNumberingScheme.Board);
+
+            controller.OpenPin(red, PinMode.Output);
+            controller.OpenPin(yellow, PinMode.Output);
+            controller.OpenPin(green, PinMode.InputPullUp);
+
+            ledPins = new List<int>() { red, yellow, green };
+
+            Console.WriteLine("InitGpIO initialised.");
+
+            TurnOnLight(controller, red, true);
+            Console.WriteLine("Turn on RED at start");
+
+            return controller;
+        }
+
+        private static void TurnOnLight(GpioController controller, int lightPin, bool reset = false)
+        {
+            if (controller.Read(lightPin) == PinValue.Low || reset)
+            {
+                ledPins.ForEach(p => {
+                    if (p == lightPin)
+                    {
+                        controller.Write(p, PinValue.High);
+                    }
+                    else
+                    {
+                        controller.Write(p, PinValue.Low);
+                    }
+                });
+            }
+        }
+
+        private static void LightFlash(GpioController controller, int lightPin, int flashCount = 1)
+        {
+            for(var i = 0; i < flashCount; i++)
+            {
+                controller.Write(lightPin, PinValue.Low);
+                controller.Write(lightPin, PinValue.High);
+            }
         }
 
         private static string SlackMessageConverter(string content)
