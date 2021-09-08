@@ -66,6 +66,9 @@
               "image": "${MODULEDIR<../IotEdgeModule1>}",
               "createOptions": {
                 "HostConfig": {
+                  "PortBindings": {
+                    "5012/tcp": [ { "HostPort":"5012"}]
+                  },
                   "Privileged": true,
                   "Binds": [ "/dev/video0:/dev/video0" ],
                   "Devices": [
