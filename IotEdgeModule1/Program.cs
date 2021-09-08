@@ -275,7 +275,7 @@ namespace IotEdgeModule1
                 else
                 {
                     Console.WriteLine("CameraStream Disabled");
-                    TurnOnLight(controller, red);
+                    //TurnOnLight(controller, red);
                     Console.WriteLine("Turn on RED in CameraStream Disabled");
                 }
             }      
@@ -299,7 +299,7 @@ namespace IotEdgeModule1
         {
             var visionClient = new HttpClient
             {
-                BaseAddress = new Uri($"http://127.0.0.1:80/")
+                BaseAddress = new Uri($"http://172.18.0.3:80/") // docker can't access 127.0.0.1
             };
 
             return visionClient;
@@ -337,6 +337,7 @@ namespace IotEdgeModule1
             Console.WriteLine("InitGpIO initialised.");
 
             TurnOnLight(controller, red, true);
+
             Console.WriteLine("Turn on RED at start");
 
             return controller;
