@@ -344,16 +344,16 @@ namespace IotEdgeModule1
 
         private static void TurnOnLight(GpioController controller, int lightPin, bool reset = false)
         {
-            if (controller.Read(lightPin) == PinValue.Low || reset)
+            if (controller.Read(lightPin) == PinValue.High || reset)
             {
                 ledPins.ForEach(p => {
                     if (p == lightPin)
                     {
-                        controller.Write(p, PinValue.High);
+                        controller.Write(p, PinValue.Low);
                     }
                     else
                     {
-                        controller.Write(p, PinValue.Low);
+                        controller.Write(p, PinValue.High);
                     }
                 });
             }
@@ -363,8 +363,8 @@ namespace IotEdgeModule1
         {
             for(var i = 0; i < flashCount; i++)
             {
-                controller.Write(lightPin, PinValue.Low);
                 controller.Write(lightPin, PinValue.High);
+                controller.Write(lightPin, PinValue.Low);
             }
         }
 

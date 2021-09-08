@@ -66,6 +66,7 @@
               "image": "${MODULEDIR<../IotEdgeModule1>}",
               "createOptions": {
                 "HostConfig": {
+                  "Privileged": true,
                   "Binds": [ "/dev/video0:/dev/video0" ],
                   "Devices": [
                     {
