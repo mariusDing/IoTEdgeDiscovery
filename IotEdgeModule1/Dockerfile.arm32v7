@@ -17,4 +17,6 @@ WORKDIR /app/out
 
 USER root
 
+EXPOSE 5012
+
 ENTRYPOINT ["dotnet", "IotEdgeModule1.dll"]
