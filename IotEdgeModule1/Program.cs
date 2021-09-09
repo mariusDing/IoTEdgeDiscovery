@@ -179,6 +179,44 @@ namespace IotEdgeModule1
                             break;
                         }
 
+
+                        // Read QR code to start a checkout session
+                        var qrReader = new BarcodeReader();
+
+                        var qrReaderResult = qrReader.Decode(frame.ToBitmap());
+
+                        if (qrReaderResult != null && qrReaderResult.BarcodeFormat == BarcodeFormat.QR_CODE)
+                        {
+                            //var total = virtualBasket.Count * 10;
+
+                            //var sessionStartMsg = $"Checkout completed. Total paid: *${total:N}* Thank you for shopping in Woolies~ See ya next time~ :smile_cat:";
+                            var payload = JsonSerializer.Serialize(virtualBasket);
+
+                            var msgBytes = Encoding.ASCII.GetBytes(payload);
+
+                            using var pipeMessage = new Message(msgBytes);
+
+                            pipeMessage.Properties.Add("ShopperEvent", "CheckoutScanned");
+                            pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
+
+                            await moduleClient.SendEventAsync("output1", pipeMessage);
+
+                            // Reset session
+                            shoppingSessionStart = false;
+                            visionItemName = string.Empty;
+                            virtualBasket.BasketProducts.Clear();
+                            Console.Beep();
+
+                            // Indicate light to yellow as session end
+                            TurnOnLight(controller, yellow);
+
+                            break;
+                        }
+
+                        var frameBytes = frame.ToBytes(".png");
+
+                        var httpContent = new ByteArrayContent(frameBytes);
+
                         if (frameRecord >= frameRecordMax)
                         {
                             stopWatch.Stop();
@@ -187,44 +225,9 @@ namespace IotEdgeModule1
                             ts.Hours, ts.Minutes, ts.Seconds,
                             ts.Milliseconds / 10);
                             Console.WriteLine("RunTime " + elapsedTime);
-                            // Read QR code to start a checkout session
-                            var qrReader = new BarcodeReader();
-
-                            var qrReaderResult = qrReader.Decode(frame.ToBitmap());
-
-                            if (qrReaderResult != null && qrReaderResult.BarcodeFormat == BarcodeFormat.QR_CODE)
-                            {
-                                //var total = virtualBasket.Count * 10;
-
-                                //var sessionStartMsg = $"Checkout completed. Total paid: *${total:N}* Thank you for shopping in Woolies~ See ya next time~ :smile_cat:";
-                                var payload = JsonSerializer.Serialize(virtualBasket);
-
-                                var msgBytes = Encoding.ASCII.GetBytes(payload);
-
-                                using var pipeMessage = new Message(msgBytes);
-
-                                pipeMessage.Properties.Add("ShopperEvent", "CheckoutScanned");
-                                pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
-
-                                await moduleClient.SendEventAsync("output1", pipeMessage);
-
-                                // Reset session
-                                shoppingSessionStart = false;
-                                visionItemName = string.Empty;
-                                virtualBasket.BasketProducts.Clear();
-                                Console.Beep();
-
-                                // Indicate light to yellow as session end
-                                TurnOnLight(controller, yellow);
-
-                                break;
-                            }
-
-                            var frameBytes = frame.ToBytes(".png");
-
-                            var httpContent = new ByteArrayContent(frameBytes);
-
                             Console.WriteLine("start send to vision api");
+
+                            stopWatch.Restart();
                             var response = await _visionClient.PostAsync("image", httpContent);
 
                             if (response.IsSuccessStatusCode)
@@ -242,7 +245,8 @@ namespace IotEdgeModule1
 
                                     VisionPrediction highestProableItem = null;
 
-                                    result.Predictions.ForEach(p => {
+                                    result.Predictions.ForEach(p =>
+                                    {
                                         if (p.Probability >= 1.0 && p.Probability > highestRate)
                                         {
                                             highestProableItem = p;
@@ -295,9 +299,15 @@ namespace IotEdgeModule1
                             }
 
                             Interlocked.Exchange(ref frameRecord, 0);
+                            stopWatch.Stop();
+                            TimeSpan tss = stopWatch.Elapsed;
+                            string elapsedTimee = String.Format("Vision API {0:00}:{1:00}:{2:00}.{3:00}",
+                            tss.Hours, tss.Minutes, tss.Seconds,
+                            tss.Milliseconds / 10);
+                            Console.WriteLine("RunTime " + elapsedTimee);
                         }
                     }
-
+                   
                     capture.Dispose();
                 }
                 else
