@@ -229,81 +229,74 @@ namespace IotEdgeModule1
 
                         if (frameRecord >= frameRecordMax)
                         {
-                            try
+                            var response = await _visionClient.PostAsync("image", httpContent);
+
+                            if (response.IsSuccessStatusCode)
                             {
-                                var response = await timeoutPolicy.ExecuteAsync(
-                                    async () => await _visionClient.PostAsync("image", httpContent));
-
-                                if (response.IsSuccessStatusCode)
+                                var content = await response.Content.ReadAsStringAsync();
+                                Console.WriteLine("start deserialize");
+                                var result = JsonSerializer.Deserialize<VisionResponse>(content, new JsonSerializerOptions()
                                 {
-                                    var content = await response.Content.ReadAsStringAsync();
-                                    Console.WriteLine("start deserialize");
-                                    var result = JsonSerializer.Deserialize<VisionResponse>(content, new JsonSerializerOptions()
+                                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                                }); ;
+
+                                if (result.Predictions.Any())
+                                {
+                                    var highestRate = 0;
+
+                                    VisionPrediction highestProableItem = null;
+
+                                    result.Predictions.ForEach(p =>
                                     {
-                                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                                    }); ;
-
-                                    if (result.Predictions.Any())
-                                    {
-                                        var highestRate = 0;
-
-                                        VisionPrediction highestProableItem = null;
-
-                                        result.Predictions.ForEach(p =>
+                                        if (p.Probability >= 0.96 && p.Probability > highestRate)
                                         {
-                                            if (p.Probability >= 0.96 && p.Probability > highestRate)
-                                            {
-                                                highestProableItem = p;
-                                            }
-                                        });
-
-                                        if (highestProableItem != null && visionItemName != highestProableItem.TagName)
-                                        {
-
-                                            //var productInBasketMsg = $"Customer put a {SlackMessageConverter(highestProableItem.TagName)} in virtual basket ({virtualBasketNumber})";
-
-                                            var basketProduct = ProductCodeConverter(highestProableItem.TagName);
-
-                                            var payload = JsonSerializer.Serialize(basketProduct);
-
-                                            var msgBytes = Encoding.ASCII.GetBytes(payload);
-
-                                            using var pipeMessage = new Message(msgBytes);
-
-                                            pipeMessage.Properties.Add("ShopperEvent", "ProductScanned");
-                                            pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
-
-                                            await moduleClient.SendEventAsync("output1", pipeMessage);
-
-                                            // Throttle 
-                                            visionItemName = highestProableItem.TagName;
-
-                                            var existingProduct = virtualBasket.BasketProducts.Where(p => p.Stockcode == basketProduct.Stockcode).FirstOrDefault();
-
-                                            if (existingProduct != null)
-                                            {
-                                                existingProduct.Quantity += basketProduct.Quantity;
-                                            }
-                                            else
-                                            {
-                                                virtualBasket.BasketProducts.Add(basketProduct);
-                                            }
-
-                                            Console.WriteLine("Message sent");
-                                            Console.Beep();
-
-                                            // Green light flash
-                                            LightFlash(controller, green);
+                                            highestProableItem = p;
                                         }
+                                    });
+
+                                    if (highestProableItem != null && visionItemName != highestProableItem.TagName)
+                                    {
+
+                                        //var productInBasketMsg = $"Customer put a {SlackMessageConverter(highestProableItem.TagName)} in virtual basket ({virtualBasketNumber})";
+
+                                        var basketProduct = ProductCodeConverter(highestProableItem.TagName);
+
+                                        var payload = JsonSerializer.Serialize(basketProduct);
+
+                                        var msgBytes = Encoding.ASCII.GetBytes(payload);
+
+                                        using var pipeMessage = new Message(msgBytes);
+
+                                        pipeMessage.Properties.Add("ShopperEvent", "ProductScanned");
+                                        pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
+
+                                        await moduleClient.SendEventAsync("output1", pipeMessage);
+
+                                        // Throttle 
+                                        visionItemName = highestProableItem.TagName;
+
+                                        var existingProduct = virtualBasket.BasketProducts.Where(p => p.Stockcode == basketProduct.Stockcode).FirstOrDefault();
+
+                                        if (existingProduct != null)
+                                        {
+                                            existingProduct.Quantity += basketProduct.Quantity;
+                                        }
+                                        else
+                                        {
+                                            virtualBasket.BasketProducts.Add(basketProduct);
+                                        }
+
+                                        Console.WriteLine("Message sent");
+                                        Console.Beep();
+
+                                        // Green light flash
+                                        LightFlash(controller, green);
                                     }
                                 }
-                                else
-                                {
-                                    Console.WriteLine("vision api fails");
-                                }
-                            } catch(TimeoutRejectedException)
+                            }
+                            else
                             {
-                                Console.WriteLine("vision api timeout");
+                                Console.WriteLine($"vision api fails. {response.StatusCode}. {response.Content.ToString()}");
                             }
 
                             Interlocked.Exchange(ref frameRecord, 0);
@@ -339,7 +332,8 @@ namespace IotEdgeModule1
         {
             var visionClient = new HttpClient
             {
-                BaseAddress = new Uri($"http://image-classifier-service:80/") // docker can't access 127.0.0.1
+                BaseAddress = new Uri($"http://image-classifier-service:80/"), // docker can't access 127.0.0.1
+                Timeout = TimeSpan.FromMilliseconds(visionTimeoutMs)
             };
 
             return visionClient;
