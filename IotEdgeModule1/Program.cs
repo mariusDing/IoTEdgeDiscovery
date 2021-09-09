@@ -251,7 +251,7 @@ namespace IotEdgeModule1
 
                                         result.Predictions.ForEach(p =>
                                         {
-                                            if (p.Probability >= 0.99 && p.Probability > highestRate)
+                                            if (p.Probability >= 0.96 && p.Probability > highestRate)
                                             {
                                                 highestProableItem = p;
                                             }
