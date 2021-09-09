@@ -31,6 +31,8 @@ namespace IotEdgeModule1
         static int yellow = 5;
         static int green = 7;
         static List<int> ledPins;
+        static int frameRecord = 0;
+        static int frameRecordMax = 60;
 
         private static readonly HttpClient _visionClient = GetVisionClient();
 
@@ -75,6 +77,9 @@ namespace IotEdgeModule1
 
             if (desiredProps.Contains("EnableCameraStream"))
                 enableCameraStream = desiredProps["EnableCameraStream"];
+
+            if (desiredProps.Contains("FrameRecordMax"))
+                frameRecordMax = desiredProps["FrameRecordMax"];
 
             // Listen desired props change
             await ioTHubModuleClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChanged, ioTHubModuleClient);
@@ -153,8 +158,12 @@ namespace IotEdgeModule1
                     // Detect product
                     while (shoppingSessionStart)
                     {
+                        Console.WriteLine("Start read frame");
                         capture.Read(frame);
                         Console.WriteLine("Start read frame");
+                        Interlocked.Add(ref frameRecord, 1);
+                        Console.WriteLine($"frame {frameRecord}");
+
 
                         if (frame.Empty())
                         {
@@ -162,111 +171,116 @@ namespace IotEdgeModule1
                             break;
                         }
 
-                        // Read QR code to start a checkout session
-                        var qrReader = new BarcodeReader();
-
-                        var qrReaderResult = qrReader.Decode(frame.ToBitmap());
-
-                        if (qrReaderResult != null && qrReaderResult.BarcodeFormat == BarcodeFormat.QR_CODE)
+                        if (frameRecordMax >= 60)
                         {
-                            //var total = virtualBasket.Count * 10;
+                            // Read QR code to start a checkout session
+                            var qrReader = new BarcodeReader();
 
-                            //var sessionStartMsg = $"Checkout completed. Total paid: *${total:N}* Thank you for shopping in Woolies~ See ya next time~ :smile_cat:";
-                            var payload = JsonSerializer.Serialize(virtualBasket);
+                            var qrReaderResult = qrReader.Decode(frame.ToBitmap());
 
-                            var msgBytes = Encoding.ASCII.GetBytes(payload);
-
-                            using var pipeMessage = new Message(msgBytes);
-
-                            pipeMessage.Properties.Add("ShopperEvent", "CheckoutScanned");
-                            pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
-
-                            await moduleClient.SendEventAsync("output1", pipeMessage);
-
-                            // Reset session
-                            shoppingSessionStart = false;
-                            visionItemName = string.Empty;
-                            virtualBasket.BasketProducts.Clear();
-                            Console.Beep();
-
-                            // Indicate light to yellow as session end
-                            TurnOnLight(controller, yellow);
-
-                            break;
-                        }
-
-                        var frameBytes = frame.ToBytes(".png");
-
-                        var httpContent = new ByteArrayContent(frameBytes);
-
-                        Console.WriteLine("start send to vision api");
-                        var response = await _visionClient.PostAsync("image", httpContent);
-
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var content = await response.Content.ReadAsStringAsync();
-                            Console.WriteLine("start deserialize");
-                            var result = JsonSerializer.Deserialize<VisionResponse>(content, new JsonSerializerOptions()
+                            if (qrReaderResult != null && qrReaderResult.BarcodeFormat == BarcodeFormat.QR_CODE)
                             {
-                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                            }); ;
+                                //var total = virtualBasket.Count * 10;
 
-                            if (result.Predictions.Any())
+                                //var sessionStartMsg = $"Checkout completed. Total paid: *${total:N}* Thank you for shopping in Woolies~ See ya next time~ :smile_cat:";
+                                var payload = JsonSerializer.Serialize(virtualBasket);
+
+                                var msgBytes = Encoding.ASCII.GetBytes(payload);
+
+                                using var pipeMessage = new Message(msgBytes);
+
+                                pipeMessage.Properties.Add("ShopperEvent", "CheckoutScanned");
+                                pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
+
+                                await moduleClient.SendEventAsync("output1", pipeMessage);
+
+                                // Reset session
+                                shoppingSessionStart = false;
+                                visionItemName = string.Empty;
+                                virtualBasket.BasketProducts.Clear();
+                                Console.Beep();
+
+                                // Indicate light to yellow as session end
+                                TurnOnLight(controller, yellow);
+
+                                break;
+                            }
+
+                            var frameBytes = frame.ToBytes(".png");
+
+                            var httpContent = new ByteArrayContent(frameBytes);
+
+                            Console.WriteLine("start send to vision api");
+                            var response = await _visionClient.PostAsync("image", httpContent);
+
+                            if (response.IsSuccessStatusCode)
                             {
-                                var highestRate = 0;
-
-                                VisionPrediction highestProableItem = null;
-
-                                result.Predictions.ForEach(p => {
-                                    if (p.Probability >= 1.0 && p.Probability > highestRate)
-                                    {
-                                        highestProableItem = p;
-                                    }
-                                });
-
-                                if (highestProableItem != null && visionItemName != highestProableItem.TagName)
+                                var content = await response.Content.ReadAsStringAsync();
+                                Console.WriteLine("start deserialize");
+                                var result = JsonSerializer.Deserialize<VisionResponse>(content, new JsonSerializerOptions()
                                 {
+                                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                                }); ;
 
-                                    //var productInBasketMsg = $"Customer put a {SlackMessageConverter(highestProableItem.TagName)} in virtual basket ({virtualBasketNumber})";
+                                if (result.Predictions.Any())
+                                {
+                                    var highestRate = 0;
 
-                                    var basketProduct = ProductCodeConverter(highestProableItem.TagName);
+                                    VisionPrediction highestProableItem = null;
 
-                                    var payload = JsonSerializer.Serialize(basketProduct);
+                                    result.Predictions.ForEach(p => {
+                                        if (p.Probability >= 1.0 && p.Probability > highestRate)
+                                        {
+                                            highestProableItem = p;
+                                        }
+                                    });
 
-                                    var msgBytes = Encoding.ASCII.GetBytes(payload);
-
-                                    using var pipeMessage = new Message(msgBytes);
-
-                                    pipeMessage.Properties.Add("ShopperEvent", "ProductScanned");
-                                    pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
-
-                                    await moduleClient.SendEventAsync("output1", pipeMessage);
-
-                                    // Throttle 
-                                    visionItemName = highestProableItem.TagName;
-
-                                    var existingProduct = virtualBasket.BasketProducts.Where(p => p.Stockcode == basketProduct.Stockcode).FirstOrDefault();
-
-                                    if (existingProduct != null)
+                                    if (highestProableItem != null && visionItemName != highestProableItem.TagName)
                                     {
-                                        existingProduct.Quantity += basketProduct.Quantity;
-                                    }
-                                    else
-                                    {
-                                        virtualBasket.BasketProducts.Add(basketProduct);
-                                    }
 
-                                    Console.WriteLine("Message sent");
-                                    Console.Beep();
+                                        //var productInBasketMsg = $"Customer put a {SlackMessageConverter(highestProableItem.TagName)} in virtual basket ({virtualBasketNumber})";
 
-                                    // Green light flash
-                                    LightFlash(controller, green);
+                                        var basketProduct = ProductCodeConverter(highestProableItem.TagName);
+
+                                        var payload = JsonSerializer.Serialize(basketProduct);
+
+                                        var msgBytes = Encoding.ASCII.GetBytes(payload);
+
+                                        using var pipeMessage = new Message(msgBytes);
+
+                                        pipeMessage.Properties.Add("ShopperEvent", "ProductScanned");
+                                        pipeMessage.Properties.Add("EdgeDevice", basketDeviceNumber);
+
+                                        await moduleClient.SendEventAsync("output1", pipeMessage);
+
+                                        // Throttle 
+                                        visionItemName = highestProableItem.TagName;
+
+                                        var existingProduct = virtualBasket.BasketProducts.Where(p => p.Stockcode == basketProduct.Stockcode).FirstOrDefault();
+
+                                        if (existingProduct != null)
+                                        {
+                                            existingProduct.Quantity += basketProduct.Quantity;
+                                        }
+                                        else
+                                        {
+                                            virtualBasket.BasketProducts.Add(basketProduct);
+                                        }
+
+                                        Console.WriteLine("Message sent");
+                                        Console.Beep();
+
+                                        // Green light flash
+                                        LightFlash(controller, green);
+                                    }
                                 }
                             }
-                        }
-                        else
-                        {
-                            Console.WriteLine("vision api fails");
+                            else
+                            {
+                                Console.WriteLine("vision api fails");
+                            }
+
+                            Interlocked.Exchange(ref frameRecord, 0);
                         }
                     }
 
@@ -299,7 +313,7 @@ namespace IotEdgeModule1
         {
             var visionClient = new HttpClient
             {
-                BaseAddress = new Uri($"http://172.18.0.3:80/") // docker can't access 127.0.0.1
+                BaseAddress = new Uri($"http://image-classifier-service:80/") // docker can't access 127.0.0.1
             };
 
             return visionClient;
