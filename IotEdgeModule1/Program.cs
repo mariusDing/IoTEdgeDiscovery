@@ -17,6 +17,7 @@ using static IotEdgeModule1.Model.VirtualBasket;
 using static IotEdgeModule1.Model.VisionResponse;
 using System.Device.Gpio;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace IotEdgeModule1
 {
@@ -27,13 +28,13 @@ namespace IotEdgeModule1
         static readonly string basketDeviceNumber = "001";
         readonly static VirtualBasket virtualBasket = new VirtualBasket();
         static bool enableCameraStream = true;
-        static bool enableGPIO = false;
+        static bool enableGPIO = true;
         static int red = 3;
         static int yellow = 5;
         static int green = 7;
         static List<int> ledPins;
         static int frameRecord = 0;
-        static int frameRecordMax = 60;
+        static int frameRecordMax = 300;
 
 
         private static readonly HttpClient _visionClient = GetVisionClient();
@@ -158,11 +159,16 @@ namespace IotEdgeModule1
                     }
 
                     // Detect product
+                    Stopwatch stopWatch = new Stopwatch();
                     while (shoppingSessionStart)
                     {
                         Console.WriteLine("Start read frame");
                         capture.Read(frame);
                         Console.WriteLine("Start read frame");
+                        if (frameRecord == 0)
+                        {
+                            stopWatch.Start();
+                        }
                         Interlocked.Increment(ref frameRecord);
                         Console.WriteLine($"frame {frameRecord}");
 
@@ -175,6 +181,12 @@ namespace IotEdgeModule1
 
                         if (frameRecord >= frameRecordMax)
                         {
+                            stopWatch.Stop();
+                            TimeSpan ts = stopWatch.Elapsed;
+                            string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+                            ts.Hours, ts.Minutes, ts.Seconds,
+                            ts.Milliseconds / 10);
+                            Console.WriteLine("RunTime " + elapsedTime);
                             // Read QR code to start a checkout session
                             var qrReader = new BarcodeReader();
 
