@@ -26,13 +26,15 @@ namespace IotEdgeModule1
         static readonly bool shoppingSessionStart = false;
         static readonly string basketDeviceNumber = "001";
         readonly static VirtualBasket virtualBasket = new VirtualBasket();
-        static bool enableCameraStream = false;
+        static bool enableCameraStream = true;
+        static bool enableGPIO = true;
         static int red = 3;
         static int yellow = 5;
         static int green = 7;
         static List<int> ledPins;
         static int frameRecord = 0;
         static int frameRecordMax = 60;
+
 
         private static readonly HttpClient _visionClient = GetVisionClient();
 
@@ -340,37 +342,46 @@ namespace IotEdgeModule1
 
         private static GpioController InitGpIO()
         {
-            GpioController controller = new GpioController(PinNumberingScheme.Board);
+            GpioController controller = null;
 
-            controller.OpenPin(red, PinMode.Output);
-            controller.OpenPin(yellow, PinMode.Output);
-            controller.OpenPin(green, PinMode.Output);
+            if (enableGPIO)
+            {
+                controller = new GpioController(PinNumberingScheme.Board);
 
-            ledPins = new List<int>() { red, yellow, green };
+                controller.OpenPin(red, PinMode.Output);
+                controller.OpenPin(yellow, PinMode.Output);
+                controller.OpenPin(green, PinMode.Output);
 
-            Console.WriteLine("InitGpIO initialised.");
+                ledPins = new List<int>() { red, yellow, green };
 
-            TurnOnLight(controller, red, true);
+                Console.WriteLine("InitGpIO initialised.");
 
-            Console.WriteLine("Turn on RED at start");
+                TurnOnLight(controller, red, true);
+
+                Console.WriteLine("Turn on RED at start");
+            }
+
 
             return controller;
         }
 
         private static void TurnOnLight(GpioController controller, int lightPin, bool reset = false)
         {
-            if (controller.Read(lightPin) == PinValue.Low || reset)
+            if (controller != null)
             {
-                ledPins.ForEach(p => {
-                    if (p == lightPin)
-                    {
-                        controller.Write(p, PinValue.High);
-                    }
-                    else
-                    {
-                        controller.Write(p, PinValue.Low);
-                    }
-                });
+                if (controller.Read(lightPin) == PinValue.Low || reset)
+                {
+                    ledPins.ForEach(p => {
+                        if (p == lightPin)
+                        {
+                            controller.Write(p, PinValue.High);
+                        }
+                        else
+                        {
+                            controller.Write(p, PinValue.Low);
+                        }
+                    });
+                }
             }
         }
 
