@@ -131,7 +131,8 @@
     "IotEdgeModule1": {
       "properties.desired": {
         "EnableCameraStream": true,
-        "FrameRecordMax": 60
+        "FrameRecordMax": 100,
+        "VisionTimeoutMs": 500
       }
     }
   }
