@@ -231,8 +231,23 @@ namespace IotEdgeModule1
                         {
                             try
                             {
+                                stopWatch.Stop();
+                                TimeSpan ts = stopWatch.Elapsed;
+                                string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+                                ts.Hours, ts.Minutes, ts.Seconds,
+                                ts.Milliseconds / 10);
+                                Console.WriteLine("Frame Time: " + elapsedTime);
+
+                                Stopwatch stopWatch2 = new Stopwatch();
+                                stopWatch2.Start();
                                 var response = await timeoutPolicy.ExecuteAsync(
                                     async () => await _visionClient.PostAsync("image", httpContent));
+                                stopWatch2.Stop();
+                                TimeSpan tss = stopWatch.Elapsed;
+                                string elapsedTimes = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+                                tss.Hours, tss.Minutes, tss.Seconds,
+                                tss.Milliseconds / 10);
+                                Console.WriteLine("Vision API time: " + elapsedTimes);
 
                                 if (response.IsSuccessStatusCode)
                                 {
@@ -293,7 +308,7 @@ namespace IotEdgeModule1
                                             Console.Beep();
 
                                             // Green light flash
-                                            LightFlash(controller, green);
+                                            await LightFlash(controller, green);
                                         }
                                     }
                                 }
@@ -409,13 +424,14 @@ namespace IotEdgeModule1
             }
         }
 
-        private static void LightFlash(GpioController controller, int lightPin, int flashCount = 1)
+        private static async Task LightFlash(GpioController controller, int lightPin, int flashCount = 1)
         {
             if (controller != null)
             {
                 for (var i = 0; i < flashCount; i++)
                 {
                     controller.Write(lightPin, PinValue.Low);
+                    await Task.Delay(500);
                     controller.Write(lightPin, PinValue.High);
                 }
             }
