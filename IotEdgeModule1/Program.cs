@@ -27,7 +27,7 @@ namespace IotEdgeModule1
         static readonly string basketDeviceNumber = "001";
         readonly static VirtualBasket virtualBasket = new VirtualBasket();
         static bool enableCameraStream = true;
-        static bool enableGPIO = true;
+        static bool enableGPIO = false;
         static int red = 3;
         static int yellow = 5;
         static int green = 7;
@@ -163,7 +163,7 @@ namespace IotEdgeModule1
                         Console.WriteLine("Start read frame");
                         capture.Read(frame);
                         Console.WriteLine("Start read frame");
-                        Interlocked.Add(ref frameRecord, 1);
+                        Interlocked.Increment(ref frameRecord);
                         Console.WriteLine($"frame {frameRecord}");
 
 
@@ -173,7 +173,7 @@ namespace IotEdgeModule1
                             break;
                         }
 
-                        if (frameRecordMax >= 60)
+                        if (frameRecord >= frameRecordMax)
                         {
                             // Read QR code to start a checkout session
                             var qrReader = new BarcodeReader();
@@ -387,10 +387,13 @@ namespace IotEdgeModule1
 
         private static void LightFlash(GpioController controller, int lightPin, int flashCount = 1)
         {
-            for(var i = 0; i < flashCount; i++)
+            if (controller != null)
             {
-                controller.Write(lightPin, PinValue.Low);
-                controller.Write(lightPin, PinValue.High);
+                for (var i = 0; i < flashCount; i++)
+                {
+                    controller.Write(lightPin, PinValue.Low);
+                    controller.Write(lightPin, PinValue.High);
+                }
             }
         }
 
