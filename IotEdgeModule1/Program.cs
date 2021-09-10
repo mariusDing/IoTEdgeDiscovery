@@ -30,7 +30,7 @@ namespace IotEdgeModule1
         static readonly string basketDeviceNumber = "001";
         readonly static VirtualBasket virtualBasket = new VirtualBasket();
         static bool enableCameraStream = true;
-        static bool enableGPIO = true;
+        static bool enableGPIO = false;
         static int red = 3;
         static int yellow = 5;
         static int green = 7;
