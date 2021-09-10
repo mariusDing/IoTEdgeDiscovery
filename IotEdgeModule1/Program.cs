@@ -36,7 +36,7 @@ namespace IotEdgeModule1
         static int green = 7;
         static List<int> ledPins;
         static int frameRecord = 0;
-        static int frameRecordMax = 300;
+        static int frameRecordMax = 100;
         static int visionTimeoutMs = 500;
         static string rewardsCardNumber = string.Empty;
         const string cartId = "001";
@@ -237,17 +237,19 @@ namespace IotEdgeModule1
                                 ts.Hours, ts.Minutes, ts.Seconds,
                                 ts.Milliseconds / 10);
                                 Console.WriteLine("Frame Time: " + elapsedTime);
+                                stopWatch.Reset();
 
                                 Stopwatch stopWatch2 = new Stopwatch();
                                 stopWatch2.Start();
                                 var response = await timeoutPolicy.ExecuteAsync(
                                     async () => await _visionClient.PostAsync("image", httpContent));
                                 stopWatch2.Stop();
-                                TimeSpan tss = stopWatch.Elapsed;
+                                TimeSpan tss = stopWatch2.Elapsed;
                                 string elapsedTimes = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
                                 tss.Hours, tss.Minutes, tss.Seconds,
                                 tss.Milliseconds / 10);
                                 Console.WriteLine("Vision API time: " + elapsedTimes);
+                                stopWatch2.Reset();
 
                                 if (response.IsSuccessStatusCode)
                                 {
