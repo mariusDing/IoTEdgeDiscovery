@@ -38,6 +38,8 @@ namespace IotEdgeModule1
         static int frameRecord = 0;
         static int frameRecordMax = 300;
         static int visionTimeoutMs = 500;
+        static string rewardsCardNumber = string.Empty;
+        const string cartId = "001";
 
 
         private static readonly HttpClient _visionClient = GetVisionClient();
@@ -144,11 +146,11 @@ namespace IotEdgeModule1
 
                         if (readerResult != null && readerResult.BarcodeFormat != BarcodeFormat.QR_CODE)
                         {
-                            var rewardsCardNumber = readerResult.Text;
+                            rewardsCardNumber = readerResult.Text;
 
                             //var sessionStartMsg = $":rewardsleaf:*{rewardsCardNumber}* start shopping on virtual basket - {virtualBasketNumber}";
 
-                            var payload = new { rewardsCardNumber };
+                            var payload = new { rewardsCardNumber, cartId };
 
                             var msgBytes = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(payload));
 
@@ -197,12 +199,9 @@ namespace IotEdgeModule1
 
                         if (qrReaderResult != null && qrReaderResult.BarcodeFormat == BarcodeFormat.QR_CODE)
                         {
-                            //var total = virtualBasket.Count * 10;
+                            var payload = new { rewardsCardNumber, cartId };
 
-                            //var sessionStartMsg = $"Checkout completed. Total paid: *${total:N}* Thank you for shopping in Woolies~ See ya next time~ :smile_cat:";
-                            var payload = JsonSerializer.Serialize(virtualBasket);
-
-                            var msgBytes = Encoding.ASCII.GetBytes(payload);
+                            var msgBytes = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(payload));
 
                             using var pipeMessage = new Message(msgBytes);
 
@@ -215,6 +214,7 @@ namespace IotEdgeModule1
                             shoppingSessionStart = false;
                             visionItemName = string.Empty;
                             virtualBasket.BasketProducts.Clear();
+                            rewardsCardNumber = string.Empty;
                             Console.Beep();
 
                             // Indicate light to yellow as session end
@@ -274,14 +274,15 @@ namespace IotEdgeModule1
 
                                         if (highestProableItem != null && visionItemName != highestProableItem.TagName)
                                         {
-
-                                            //var productInBasketMsg = $"Customer put a {SlackMessageConverter(highestProableItem.TagName)} in virtual basket ({virtualBasketNumber})";
-
                                             var basketProduct = ProductCodeConverter(highestProableItem.TagName);
 
-                                            var payload = JsonSerializer.Serialize(basketProduct);
+                                            var payload = new { rewardsCardNumber, 
+                                                                stockcode = basketProduct.Stockcode,
+                                                                quantity = basketProduct.Quantity,
+                                                                cartId
+                                            };
 
-                                            var msgBytes = Encoding.ASCII.GetBytes(payload);
+                                            var msgBytes = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(payload));
 
                                             using var pipeMessage = new Message(msgBytes);
 
@@ -366,13 +367,11 @@ namespace IotEdgeModule1
             {
                 "apple" => new BasketProduct { 
                     Stockcode = "105919",
-                    ProductName = "Pink Lady Apple",
                     Quantity = 1
                 },
                 "Banana" => new BasketProduct
                 {
                     Stockcode = "133211",
-                    ProductName = "Cavendish Banana",
                     Quantity = 1
                 },
                 _ => null
