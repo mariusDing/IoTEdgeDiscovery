@@ -65,17 +65,6 @@
             "settings": {
               "image": "${MODULEDIR<../IotEdgeModule1>.debug}",
               "createOptions": {
-                "Binds": [ "/dev/video0:/dev/video0" ],
-                "PortBindings": {
-                  "5012/tcp": [ { "HostPort":"5012"}]
-                },
-                "Devices": [
-                  {
-                    "PathOnHost": "/dev/video0",
-                    "PathInContainer": "/dev/video0",
-                    "CgroupPermissions": "mrw"
-                  }
-                ]
               }
             }
           },
