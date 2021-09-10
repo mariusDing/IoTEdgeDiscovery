@@ -36,7 +36,7 @@ namespace IotEdgeModule1
         static int green = 7;
         static List<int> ledPins;
         static int frameRecord = 0;
-        static int frameRecordMax = 300;
+        static int frameRecordMax = 100;
         static int visionTimeoutMs = 500;
         static string rewardsCardNumber = string.Empty;
         const string cartId = "001";
