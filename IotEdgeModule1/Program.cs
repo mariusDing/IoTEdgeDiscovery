@@ -254,7 +254,7 @@ namespace IotEdgeModule1
                                 if (response.IsSuccessStatusCode)
                                 {
                                     var content = await response.Content.ReadAsStringAsync();
-                                    Console.WriteLine("start deserialize");
+                                    Console.WriteLine("start deserialize. Content:{0}", content);
                                     var result = JsonSerializer.Deserialize<VisionResponse>(content, new JsonSerializerOptions()
                                     {
                                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
