@@ -67,14 +67,19 @@
               "createOptions": {
                 "HostConfig": {
                   "PortBindings": {
-                    "5012/tcp": [ { "HostPort":"5012"}]
+                    "5012/tcp": [ { "HostPort": "5012" } ]
                   },
                   "Privileged": true,
-                  "Binds": [ "/dev/video0:/dev/video0" ],
+                  "Binds": [ "/dev/video0:/dev/video0", "/dev/snd:/dev/snd" ],
                   "Devices": [
                     {
                       "PathOnHost": "/dev/video0",
                       "PathInContainer": "/dev/video0",
+                      "CgroupPermissions": "mrw"
+                    },
+                    {
+                      "PathOnHost": "/dev/snd",
+                      "PathInContainer": "/dev/snd",
                       "CgroupPermissions": "mrw"
                     }
                   ]
