@@ -268,7 +268,7 @@ namespace IotEdgeModule1
 
                                         result.Predictions.ForEach(p =>
                                         {
-                                            if (p.Probability >= 0.96 && p.Probability > highestRate)
+                                            if (p.Probability >= 0.99999 && p.Probability > highestRate)
                                             {
                                                 highestProableItem = p;
                                             }
@@ -276,6 +276,11 @@ namespace IotEdgeModule1
 
                                         if (highestProableItem != null && visionItemName != highestProableItem.TagName)
                                         {
+                                            if (highestProableItem.TagName == "apple" && highestProableItem.Probability < 1)
+                                            {
+                                                break;
+                                            }
+
                                             var basketProduct = ProductCodeConverter(highestProableItem.TagName);
 
                                             var payload = new { rewardsCardNumber, 
